@@ -2,6 +2,8 @@
 using Verificat;
 using Verificat.Models;
 
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 var config = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -50,5 +52,9 @@ foreach (var invoice in invoices)
 {
     invoiceManager.CreateInvoice(invoice);
 }
+
+invoiceManager.VerifyChain();
+
+invoiceManager.SimulateTampering();
 
 invoiceManager.VerifyChain();
