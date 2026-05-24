@@ -108,6 +108,69 @@ internal class InvoiceManager
             Console.WriteLine($"Cadena verificada - {invoices.Count} factures íntegres.");
     }
 
+    public void SimulateTampering()
+    {
+        // Mostra les factures disponibles
+        var invoices = _repository.GetAllOrdered();
+        if (invoices.Count == 0)
+        {
+            Console.WriteLine("No hi ha factures per manipular.");
+            return;
+        }
+
+        Console.WriteLine("\nFactures disponibles:");
+        foreach (var inv in invoices)
+            Console.WriteLine($"  ID {inv.Id} — {inv.SerieFactura}-{inv.NumeroFactura} - {inv.ImportTotal:F2}€");
+
+        Console.Write("\nIntrodueix l'ID de la factura a manipular: ");
+        if (!int.TryParse(Console.ReadLine(), out int id) ||
+            !invoices.Any(i => i.Id == id))
+        {
+            Console.WriteLine("ID no vàlid.");
+            return;
+        }
+
+        Console.WriteLine("\nTipus de manipulació:");
+        Console.WriteLine("  1. Modificar l'import");
+        Console.WriteLine("  2. Esborrar la factura");
+        Console.Write("\nOpció: ");
+        string option = Console.ReadLine() ?? "";
+
+        switch (option)
+        {
+            case "1":
+                Console.Write("Nou import total (ex: 10.50): ");
+                if (!decimal.TryParse(Console.ReadLine(),
+                                    NumberStyles.Any, 
+                                    CultureInfo.InvariantCulture,
+                                    out decimal newAmount)
+                    )
+                {
+                    Console.WriteLine("Import no vàlid.");
+                    return;
+                }
+
+                bool updateSuccess = _repository.AlterInvoiceAmount(id, newAmount);
+                if (updateSuccess)
+                    Console.WriteLine($"Factura ID {id} modificada => ImportTotal: {newAmount:F2}€");
+                else
+                    Console.WriteLine("Error: No s'ha pogut actualitzar la base de dades.");
+                break;
+
+            case "2":
+                bool deleteSuccess = _repository.DeleteInvoice(id);
+                if (deleteSuccess)
+                    Console.WriteLine($"Factura ID {id} esborrada de la base de dades.");
+                else
+                    Console.WriteLine("Error: No s'ha pogut esborrar la factura.");
+                break;
+
+            default:
+                Console.WriteLine("Opció no vàlida.");
+                break;
+        }
+    }
+
     private static string GenerateSha256Hash(string payload)
     {
         byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
