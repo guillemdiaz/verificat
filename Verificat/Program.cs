@@ -50,3 +50,5 @@ foreach (var invoice in invoices)
 {
     invoiceManager.CreateInvoice(invoice);
 }
+
+invoiceManager.VerifyChain();

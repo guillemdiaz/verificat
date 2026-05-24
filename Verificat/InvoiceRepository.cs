@@ -15,19 +15,19 @@ internal class InvoiceRepository
 
     public string GetLastHash(SqlConnection connection, SqlTransaction transaction)
     {
-        const string queryString = @"
+        const string query = @"
                 SELECT TOP 1 Empremta
                 FROM RegistresFacturacio
                 ORDER BY ID DESC
             ";
-        using var command = new SqlCommand(queryString, connection, transaction);
+        using var command = new SqlCommand(query, connection, transaction);
         object? result = command.ExecuteScalar();
         return result?.ToString() ?? string.Empty;
     }
 
     public void Insert(SqlConnection connection, SqlTransaction transaction, Invoice invoice)
     {
-        const string queryString = @"
+        const string query = @"
                 INSERT INTO RegistresFacturacio 
                     (SerieFactura, NumeroFactura, DataExpedicio, NIFEmissor, 
                     ImportTotal, TipusImpositiu, QuotaIVA, PrimerRegistre, 
@@ -37,7 +37,7 @@ internal class InvoiceRepository
                     @ImportTotal, @TipusImpositiu, @QuotaIVA, @PrimerRegistre, 
                     @EmpremtaAnterior, @Empremta)";
 
-        using var command = new SqlCommand(queryString, connection, transaction);
+        using var command = new SqlCommand(query, connection, transaction);
 
         command.Parameters.Add("@SerieFactura", SqlDbType.NVarChar, 20).Value = invoice.SerieFactura;
         command.Parameters.Add("@NumeroFactura", SqlDbType.NVarChar, 60).Value = invoice.NumeroFactura;
@@ -51,5 +51,42 @@ internal class InvoiceRepository
         command.Parameters.Add("@Empremta", SqlDbType.NVarChar, 64).Value = invoice.Empremta;
 
         command.ExecuteNonQuery();
+    }
+
+    public List<Invoice> GetAllOrdered()
+    {
+        const string query = @"
+            SELECT ID, SerieFactura, NumeroFactura, DataExpedicio,
+                   NIFEmissor, ImportTotal, TipusImpositiu, QuotaIVA,
+                   PrimerRegistre, EmpremtaAnterior, Empremta
+            FROM RegistresFacturacio
+            ORDER BY ID ASC
+        ";
+
+        var invoices = new List<Invoice>();
+
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand(query, connection);
+        connection.Open();
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            invoices.Add(new Invoice
+            {
+                Id = (int)reader["ID"],
+                SerieFactura = (string)reader["SerieFactura"],
+                NumeroFactura = (string)reader["NumeroFactura"],
+                DataExpedicio = (DateTime)reader["DataExpedicio"],
+                NIFEmissor = (string)reader["NIFEmissor"],
+                ImportTotal = (decimal)reader["ImportTotal"],
+                TipusImpositiu = (decimal)reader["TipusImpositiu"],
+                QuotaIVA = (decimal)reader["QuotaIVA"],
+                PrimerRegistre = (string)reader["PrimerRegistre"],
+                EmpremtaAnterior = (string)reader["EmpremtaAnterior"],
+                Empremta = (string)reader["Empremta"]
+            });
+        }
+        return invoices;
     }
 }
