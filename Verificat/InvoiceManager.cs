@@ -60,7 +60,54 @@ internal class InvoiceManager
             throw;
         }
     }
-   
+
+    public void VerifyChain()
+    {
+        var invoices = _repository.GetAllOrdered();
+
+        if (invoices.Count == 0)
+        {
+            Console.WriteLine("No hi ha factures a la base de dades.");
+            return;
+        }
+
+        // La primera factura sempre ha d'apuntar al Genesis Hash (tot zeros)
+        string expectedPreviousHash = GenesisHash;
+        bool chainValid = true;
+
+        // Recorre totes les factures en ordre ascendent verificant que:
+        // - Cada factura apunti a l'empremta de l'anterior
+        // - L'empremta de cada factura coincideixi amb el recàlcul a partir de les seves dades
+        foreach (var invoice in invoices)
+        {
+            // Verifica que l'encadenament és seqüencial i sense salts.
+            if (invoice.EmpremtaAnterior != expectedPreviousHash)
+            {
+                Console.WriteLine($"Cadena trencada a ID {invoice.Id} - EmpremtaAnterior no coincideix.");
+                chainValid = false;
+            }
+
+            // Torna a calcular l'empremta (hash) a partir de les dades de la factura actual
+            // i l'empremta anterior.
+            string payload = BuildPayload(invoice, invoice.EmpremtaAnterior);
+            string recalculated = GenerateSha256Hash(payload);
+
+            // Si l'empremta recalculada no és exactament igual a la que hi ha guardada
+            // a la base de dades, vol dir que s'ha modificat algun camp de la factura.
+            if (recalculated != invoice.Empremta)
+            {
+                Console.WriteLine($"Manipulació detectada a ID {invoice.Id} - l'empremta no coincideix.");
+                chainValid = false;
+            }
+
+            // La factura següent haurà d'apuntar a l'empremta d'aquesta factura.
+            expectedPreviousHash = invoice.Empremta;
+        }
+
+        if (chainValid)
+            Console.WriteLine($"Cadena verificada - {invoices.Count} factures íntegres.");
+    }
+
     private static string GenerateSha256Hash(string payload)
     {
         byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
