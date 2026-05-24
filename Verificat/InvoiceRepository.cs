@@ -20,6 +20,7 @@ internal class InvoiceRepository
                 FROM RegistresFacturacio
                 ORDER BY ID DESC
             ";
+        
         using var command = new SqlCommand(query, connection, transaction);
         object? result = command.ExecuteScalar();
         return result?.ToString() ?? string.Empty;
@@ -38,7 +39,6 @@ internal class InvoiceRepository
                     @EmpremtaAnterior, @Empremta)";
 
         using var command = new SqlCommand(query, connection, transaction);
-
         command.Parameters.Add("@SerieFactura", SqlDbType.NVarChar, 20).Value = invoice.SerieFactura;
         command.Parameters.Add("@NumeroFactura", SqlDbType.NVarChar, 60).Value = invoice.NumeroFactura;
         command.Parameters.Add("@DataExpedicio", SqlDbType.DateTime).Value = invoice.DataExpedicio;
@@ -49,7 +49,6 @@ internal class InvoiceRepository
         command.Parameters.Add("@PrimerRegistre", SqlDbType.NVarChar, 1).Value = invoice.PrimerRegistre;
         command.Parameters.Add("@EmpremtaAnterior", SqlDbType.NVarChar, 64).Value = invoice.EmpremtaAnterior;
         command.Parameters.Add("@Empremta", SqlDbType.NVarChar, 64).Value = invoice.Empremta;
-
         command.ExecuteNonQuery();
     }
 
@@ -88,5 +87,64 @@ internal class InvoiceRepository
             });
         }
         return invoices;
+    }
+
+    public int GetRandomInvoiceId()
+    {
+        const string query = @"
+            SELECT TOP 1 ID
+            FROM RegistresFacturacio
+            ORDER BY NEWID()
+        ";
+
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand(query, connection);
+        connection.Open();
+        object? result = command.ExecuteScalar();
+
+        return (result is null || result == DBNull.Value) ? -1 : (int)result;
+    }
+
+    public bool AlterInvoiceAmount(int id, decimal newAmount)
+    {
+        const string query = @"
+            UPDATE RegistresFacturacio 
+            SET ImportTotal = @NewAmount
+            WHERE ID = @Id
+        ";
+
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand(query, connection);
+
+        var amountParam = new SqlParameter("@NewAmount", SqlDbType.Decimal)
+        {
+            Precision = 12,
+            Scale = 2,
+            Value = newAmount
+        };
+        command.Parameters.Add(amountParam);
+        command.Parameters.Add("@Id", SqlDbType.Int).Value = id;
+
+        connection.Open();
+        int rowsAffected = command.ExecuteNonQuery();
+
+        return rowsAffected > 0;
+    }
+
+    public bool DeleteInvoice(int id)
+    {
+        const string query = @"
+            DELETE FROM RegistresFacturacio
+            WHERE ID = @Id
+        ";
+
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand(query, connection);
+        command.Parameters.Add("@Id", SqlDbType.Int).Value = id;
+
+        connection.Open();
+        int rowsAffected = command.ExecuteNonQuery();
+
+        return rowsAffected > 0;
     }
 }
