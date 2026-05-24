@@ -43,9 +43,15 @@ internal class InvoiceRepository
         command.Parameters.Add("@NumeroFactura", SqlDbType.NVarChar, 60).Value = invoice.NumeroFactura;
         command.Parameters.Add("@DataExpedicio", SqlDbType.DateTime).Value = invoice.DataExpedicio;
         command.Parameters.Add("@NIFEmissor", SqlDbType.NVarChar, 20).Value = invoice.NIFEmissor;
-        command.Parameters.Add("@ImportTotal", SqlDbType.Decimal).Value = invoice.ImportTotal;
-        command.Parameters.Add("@TipusImpositiu", SqlDbType.Decimal).Value = invoice.TipusImpositiu;
-        command.Parameters.Add("@QuotaIVA", SqlDbType.Decimal).Value = invoice.QuotaIVA;
+        command.Parameters.Add(new SqlParameter("@ImportTotal", SqlDbType.Decimal) { 
+            Precision = 12, Scale = 2, Value = invoice.ImportTotal 
+        });
+        command.Parameters.Add(new SqlParameter("@TipusImpositiu", SqlDbType.Decimal) { 
+            Precision = 4, Scale = 2, Value = invoice.TipusImpositiu 
+        });
+        command.Parameters.Add(new SqlParameter("@QuotaIVA", SqlDbType.Decimal) { 
+            Precision = 12, Scale = 2, Value = invoice.QuotaIVA 
+        });
         command.Parameters.Add("@PrimerRegistre", SqlDbType.NVarChar, 1).Value = invoice.PrimerRegistre;
         command.Parameters.Add("@EmpremtaAnterior", SqlDbType.NVarChar, 64).Value = invoice.EmpremtaAnterior;
         command.Parameters.Add("@Empremta", SqlDbType.NVarChar, 64).Value = invoice.Empremta;
