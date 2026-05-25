@@ -19,10 +19,11 @@ while (true)
     Console.WriteLine(@"> SELECCIONA UNA OPCIÓ:                ");
     Console.WriteLine(@"  1) Generar factures de prova         ");
     Console.WriteLine(@"  2) Mostrar factures                  ");
-    Console.WriteLine(@"  3) Verificar integritat de la cadena ");
-    Console.WriteLine(@"  4) Simular manipulació               ");
-    Console.WriteLine(@"  5) Resetejar sistema (Perill)        ");
-    Console.WriteLine(@"  6) Sortir                            ");
+    Console.WriteLine(@"  3) Exportar factura a XML (Verifactu)");
+    Console.WriteLine(@"  4) Verificar integritat de la cadena ");
+    Console.WriteLine(@"  5) Simular manipulació               ");
+    Console.WriteLine(@"  6) Resetejar sistema (Perill)        ");
+    Console.WriteLine(@"  7) Sortir                            ");
     Console.WriteLine(@"///////////////////////////////////////");
     Console.Write("\n>_ ");
 
@@ -35,15 +36,18 @@ while (true)
             ViewInvoices(manager);
             break;
         case "3":
-            RunVerification(manager);
+            ExportInvoiceToXml(manager);
             break;
         case "4":
-            RunTampering(manager);
+            RunVerification(manager);
             break;
         case "5":
-            ResetDatabase(manager);
+            RunTampering(manager);
             break;
         case "6":
+            ResetDatabase(manager);
+            break;
+        case "7":
             Console.WriteLine("Fins aviat.");
             return;
         default:
@@ -204,4 +208,39 @@ static void ViewInvoices(InvoiceManager manager)
             $"| {inv.QuotaIVA,5:F2}€ | {shortHash}");
     }
     Console.WriteLine("    --------------------------------------------------------------------------------");
+}
+
+static void ExportInvoiceToXml(InvoiceManager manager)
+{
+    var invoices = manager.GetAllInvoices();
+    if (invoices.Count == 0)
+    {
+        Console.WriteLine("\n    [INFO] No hi ha factures per exportar.");
+        return;
+    }
+
+    Console.Write("\n    ID de la factura a exportar a XML: ");
+    if (!int.TryParse(Console.ReadLine(), out int id) || !invoices.Any(i => i.Id == id))
+    {
+        Console.WriteLine("    [FAIL] ID no vàlid.");
+        return;
+    }
+
+    var invoice = invoices.First(i => i.Id == id);
+    string xmlOutput = manager.GenerateVerifactuXml(invoice);
+
+    Console.WriteLine("\n    [INFO] XML generat");
+    Console.WriteLine("    --------------------------------------------------------------------------------");
+    Console.WriteLine(xmlOutput);
+    Console.WriteLine("    --------------------------------------------------------------------------------");
+
+    string exportFolder = "Xml";
+    Directory.CreateDirectory(exportFolder);
+
+    string fileName = $"invoice_{id}.xml";
+    string filePath = Path.Combine(exportFolder, fileName);
+
+    File.WriteAllText(filePath, xmlOutput, System.Text.Encoding.UTF8);
+
+    Console.WriteLine($"    [OK] Fitxer desat correctament a {filePath}");
 }
