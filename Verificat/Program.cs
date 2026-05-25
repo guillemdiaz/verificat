@@ -18,9 +18,11 @@ while (true)
     Console.WriteLine(@"////////////// VeriFicat \\\\\\\\\\\\\\");
     Console.WriteLine(@"> SELECCIONA UNA OPCIÓ:                ");
     Console.WriteLine(@"  1) Generar factures de prova         ");
-    Console.WriteLine(@"  2) Verificar integritat de la cadena ");
-    Console.WriteLine(@"  3) Simular manipulació               ");
-    Console.WriteLine(@"  4) Sortir                            ");
+    Console.WriteLine(@"  2) Mostrar factures                  ");
+    Console.WriteLine(@"  3) Verificar integritat de la cadena ");
+    Console.WriteLine(@"  4) Simular manipulació               ");
+    Console.WriteLine(@"  5) Resetejar sistema (Perill)        ");
+    Console.WriteLine(@"  6) Sortir                            ");
     Console.WriteLine(@"///////////////////////////////////////");
     Console.Write("\n>_ ");
 
@@ -30,12 +32,18 @@ while (true)
             GenerateTestInvoices(manager);
             break;
         case "2":
-            RunVerification(manager);
+            ViewInvoices(manager);
             break;
         case "3":
-            RunTampering(manager);
+            RunVerification(manager);
             break;
         case "4":
+            RunTampering(manager);
+            break;
+        case "5":
+            ResetDatabase(manager);
+            break;
+        case "6":
             Console.WriteLine("Fins aviat.");
             return;
         default:
@@ -125,7 +133,12 @@ static void RunTampering(InvoiceManager manager)
             return;
         }
 
-        
+        if (newAmount <= 0)
+        {
+            Console.WriteLine("    [FAIL] L'import ha de ser positiu.");
+            return;
+        }
+
         if (newAmount >= 10000000000m || newAmount <= -10000000000m)
         {
             Console.WriteLine("    [FAIL] L'import és massa gran.");
@@ -139,4 +152,56 @@ static void RunTampering(InvoiceManager manager)
 
     if (success)
         Console.WriteLine("    > Executa l'opció 2 per auditar la manipulació.");
+}
+
+static void ResetDatabase(InvoiceManager manager)
+{
+    var invoices = manager.GetAllInvoices();
+    if (invoices.Count == 0)
+    {
+        Console.WriteLine("\n    [INFO] No hi ha factures per esborrar.");
+        return;
+    }
+
+    Console.WriteLine($"\n    [WARN] Estàs a punt d'esborrar totes les factures ({invoices.Count} registres) i posar l'ID a zero.");
+    Console.Write("    Estàs segur que vols continuar? (S/N): ");
+
+    string confirmacio = Console.ReadLine()?.Trim().ToUpper() ?? "";
+
+    if (confirmacio == "S")
+    {
+        Console.WriteLine();
+        var (success, message) = manager.ResetSystem();
+        Console.WriteLine(success ? $"    [OK] {message}" : $"    [FAIL] {message}");
+    }
+    else
+    {
+        Console.WriteLine("\n    [INFO] Operació de reseteig cancel·lada.");
+    }
+}
+
+static void ViewInvoices(InvoiceManager manager)
+{
+    var invoices = manager.GetAllInvoices();
+
+    Console.WriteLine();
+    if (invoices.Count == 0)
+    {
+        Console.WriteLine("    [INFO] No hi ha factures per mostrar.");
+        return;
+    }
+
+    Console.WriteLine($"    [INFO] Mostrant {invoices.Count} factura(es) registrades:\n");
+    Console.WriteLine("    ID | Sèrie-Num | Data       | NIF Emissor | Import  | IVA    | Hash");
+    Console.WriteLine("    --------------------------------------------------------------------------------");
+
+    foreach (var inv in invoices)
+    {
+        string shortHash = string.IsNullOrEmpty(inv.Empremta) ? "Cap" : inv.Empremta[..10] + "...";
+
+        Console.WriteLine($"    {inv.Id,-2} | {inv.SerieFactura}-{inv.NumeroFactura,-4} " +
+            $"| {inv.DataExpedicio:dd/MM/yyyy} | {inv.NIFEmissor,-11} | {inv.ImportTotal,6:F2}€ " +
+            $"| {inv.QuotaIVA,5:F2}€ | {shortHash}");
+    }
+    Console.WriteLine("    --------------------------------------------------------------------------------");
 }

@@ -95,22 +95,6 @@ internal class InvoiceRepository
         return invoices;
     }
 
-    public int GetRandomInvoiceId()
-    {
-        const string query = @"
-            SELECT TOP 1 ID
-            FROM RegistresFacturacio
-            ORDER BY NEWID()
-        ";
-
-        using var connection = new SqlConnection(_connectionString);
-        using var command = new SqlCommand(query, connection);
-        connection.Open();
-        object? result = command.ExecuteScalar();
-
-        return (result is null || result == DBNull.Value) ? -1 : (int)result;
-    }
-
     public bool AlterInvoiceAmount(int id, decimal newAmount)
     {
         const string query = @"
@@ -152,5 +136,25 @@ internal class InvoiceRepository
         int rowsAffected = command.ExecuteNonQuery();
 
         return rowsAffected > 0;
+    }
+
+    public bool DeleteAllInvoices()
+    {
+        const string query = "TRUNCATE TABLE RegistresFacturacio";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            using var command = new SqlCommand(query, connection);
+
+            connection.Open();
+            command.ExecuteNonQuery();
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
