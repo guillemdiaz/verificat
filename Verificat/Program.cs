@@ -155,7 +155,7 @@ static void RunTampering(InvoiceManager manager)
     Console.WriteLine(success ? $"    [WARN] {message}" : $"    [FAIL] {message}");
 
     if (success)
-        Console.WriteLine("    > Executa l'opció 2 per auditar la manipulació.");
+        Console.WriteLine("    > Executa l'opció 4 per verificar la manipulació.");
 }
 
 static void ResetDatabase(InvoiceManager manager)
