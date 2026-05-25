@@ -133,7 +133,12 @@ static void RunTampering(InvoiceManager manager)
             return;
         }
 
-        
+        if (newAmount <= 0)
+        {
+            Console.WriteLine("    [FAIL] L'import ha de ser positiu.");
+            return;
+        }
+
         if (newAmount >= 10000000000m || newAmount <= -10000000000m)
         {
             Console.WriteLine("    [FAIL] L'import és massa gran.");
