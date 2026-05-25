@@ -95,22 +95,6 @@ internal class InvoiceRepository
         return invoices;
     }
 
-    public int GetRandomInvoiceId()
-    {
-        const string query = @"
-            SELECT TOP 1 ID
-            FROM RegistresFacturacio
-            ORDER BY NEWID()
-        ";
-
-        using var connection = new SqlConnection(_connectionString);
-        using var command = new SqlCommand(query, connection);
-        connection.Open();
-        object? result = command.ExecuteScalar();
-
-        return (result is null || result == DBNull.Value) ? -1 : (int)result;
-    }
-
     public bool AlterInvoiceAmount(int id, decimal newAmount)
     {
         const string query = @"
