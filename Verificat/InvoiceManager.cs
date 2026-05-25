@@ -21,7 +21,7 @@ internal class InvoiceManager
         _repository = new InvoiceRepository(connectionString);
     }
 
-    public void CreateInvoice(Invoice invoice)
+    public InvoiceResult CreateInvoice(Invoice invoice)
     {
         using var connection = new SqlConnection(_connectionString);
         connection.Open();
@@ -43,37 +43,45 @@ internal class InvoiceManager
             _repository.Insert(connection, transaction, invoice);
             transaction.Commit();
 
-            Console.WriteLine($"Factura {invoice.SerieFactura}-{invoice.NumeroFactura} creada.");
-            Console.WriteLine($"Empremta: {invoice.Empremta}");
+            return new InvoiceResult
+            {
+                Success = true,
+                Message = $"Factura {invoice.SerieFactura}-{invoice.NumeroFactura} creada.",
+                Empremta = invoice.Empremta
+            };
         }
         catch (SqlException ex) when (ex.Number == 2627)
         {
-            Console.WriteLine($"S'ha ignorat la factura {invoice.SerieFactura}-{invoice.NumeroFactura} " +
-                $"perquè ja existeix.");
-            transaction.Rollback();
-            return;
+            return new InvoiceResult
+            {
+                Success = false,
+                Message = $"La factura {invoice.SerieFactura}-{invoice.NumeroFactura} ja existeix."
+            };
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"S'ha produït un error en crear la factura: {ex.Message}.");
             transaction.Rollback();
-            throw;
+            return new InvoiceResult
+            {
+                Success = false,
+                Message = $"    [INFO] {ex.Message}"
+            };
         }
     }
 
-    public void VerifyChain()
+    public ChainVerificationResult VerifyChain()
     {
         var invoices = _repository.GetAllOrdered();
+        var errors = new List<string>();
 
         if (invoices.Count == 0)
-        {
-            Console.WriteLine("No hi ha factures a la base de dades.");
-            return;
-        }
+            return new ChainVerificationResult(false, 0,
+                new List<string> { "No hi ha factures a la base de dades." }
+            );
+
 
         // La primera factura sempre ha d'apuntar al Genesis Hash (tot zeros)
         string expectedPreviousHash = GenesisHash;
-        bool chainValid = true;
 
         // Recorre totes les factures en ordre ascendent verificant que:
         // - Cada factura apunti a l'empremta de l'anterior
@@ -82,10 +90,8 @@ internal class InvoiceManager
         {
             // Verifica que l'encadenament és seqüencial i sense salts.
             if (invoice.EmpremtaAnterior != expectedPreviousHash)
-            {
-                Console.WriteLine($"Cadena trencada a ID {invoice.Id} - EmpremtaAnterior no coincideix.");
-                chainValid = false;
-            }
+                errors.Add($"ID {invoice.Id} - cadena trencada (EmpremtaAnterior no coincideix).");
+
 
             // Torna a calcular l'empremta (hash) a partir de les dades de la factura actual
             // i l'empremta anterior.
@@ -95,81 +101,36 @@ internal class InvoiceManager
             // Si l'empremta recalculada no és exactament igual a la que hi ha guardada
             // a la base de dades, vol dir que s'ha modificat algun camp de la factura.
             if (recalculated != invoice.Empremta)
-            {
-                Console.WriteLine($"Manipulació detectada a ID {invoice.Id} - l'empremta no coincideix.");
-                chainValid = false;
-            }
+                errors.Add($"ID {invoice.Id} - manipulació detectada (empremta no coincideix).");
 
             // La factura següent haurà d'apuntar a l'empremta d'aquesta factura.
             expectedPreviousHash = invoice.Empremta;
         }
 
-        if (chainValid)
-            Console.WriteLine($"Cadena verificada - {invoices.Count} factures íntegres.");
+        return new ChainVerificationResult(
+            IsValid: errors.Count == 0,
+            TotalInvoices: invoices.Count,
+            Errors: errors
+        );
     }
 
-    public void SimulateTampering()
+    public (bool Success, string Message) SimulateTampering(int id, string mode, decimal newAmount = 0)
     {
-        // Mostra les factures disponibles
-        var invoices = _repository.GetAllOrdered();
-        if (invoices.Count == 0)
+        return mode switch
         {
-            Console.WriteLine("No hi ha factures per manipular.");
-            return;
-        }
+            "1" => _repository.AlterInvoiceAmount(id, newAmount)
+                ? (true, $"Factura ID {id} modificada => ImportTotal: {newAmount:F2}€")
+                : (false, "No s'ha pogut modificar la factura."),
 
-        Console.WriteLine("\nFactures disponibles:");
-        foreach (var inv in invoices)
-            Console.WriteLine($"  ID {inv.Id} — {inv.SerieFactura}-{inv.NumeroFactura} - {inv.ImportTotal:F2}€");
+            "2" => _repository.DeleteInvoice(id)
+                    ? (true, $"Factura ID {id} esborrada de la base de dades.")
+                    : (false, "No s'ha pogut esborrar la factura."),
 
-        Console.Write("\nIntrodueix l'ID de la factura a manipular: ");
-        if (!int.TryParse(Console.ReadLine(), out int id) ||
-            !invoices.Any(i => i.Id == id))
-        {
-            Console.WriteLine("ID no vàlid.");
-            return;
-        }
-
-        Console.WriteLine("\nTipus de manipulació:");
-        Console.WriteLine("  1. Modificar l'import");
-        Console.WriteLine("  2. Esborrar la factura");
-        Console.Write("\nOpció: ");
-        string option = Console.ReadLine() ?? "";
-
-        switch (option)
-        {
-            case "1":
-                Console.Write("Nou import total (ex: 10.50): ");
-                if (!decimal.TryParse(Console.ReadLine(),
-                                    NumberStyles.Any, 
-                                    CultureInfo.InvariantCulture,
-                                    out decimal newAmount)
-                    )
-                {
-                    Console.WriteLine("Import no vàlid.");
-                    return;
-                }
-
-                bool updateSuccess = _repository.AlterInvoiceAmount(id, newAmount);
-                if (updateSuccess)
-                    Console.WriteLine($"Factura ID {id} modificada => ImportTotal: {newAmount:F2}€");
-                else
-                    Console.WriteLine("Error: No s'ha pogut actualitzar la base de dades.");
-                break;
-
-            case "2":
-                bool deleteSuccess = _repository.DeleteInvoice(id);
-                if (deleteSuccess)
-                    Console.WriteLine($"Factura ID {id} esborrada de la base de dades.");
-                else
-                    Console.WriteLine("Error: No s'ha pogut esborrar la factura.");
-                break;
-
-            default:
-                Console.WriteLine("Opció no vàlida.");
-                break;
-        }
+            _ => (false, "Opció no vàlida.")
+        };
     }
+
+    public List<Invoice> GetAllInvoices() => _repository.GetAllOrdered();
 
     private static string GenerateSha256Hash(string payload)
     {
