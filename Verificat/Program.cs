@@ -20,7 +20,8 @@ while (true)
     Console.WriteLine(@"  1) Generar factures de prova         ");
     Console.WriteLine(@"  2) Verificar integritat de la cadena ");
     Console.WriteLine(@"  3) Simular manipulació               ");
-    Console.WriteLine(@"  4) Sortir                            ");
+    Console.WriteLine(@"  4) Resetejar sistema                 ");
+    Console.WriteLine(@"  5) Sortir                            ");
     Console.WriteLine(@"///////////////////////////////////////");
     Console.Write("\n>_ ");
 
@@ -36,6 +37,9 @@ while (true)
             RunTampering(manager);
             break;
         case "4":
+            ResetDatabase(manager);
+            break;
+        case "5":
             Console.WriteLine("Fins aviat.");
             return;
         default:
@@ -139,4 +143,30 @@ static void RunTampering(InvoiceManager manager)
 
     if (success)
         Console.WriteLine("    > Executa l'opció 2 per auditar la manipulació.");
+}
+
+static void ResetDatabase(InvoiceManager manager)
+{
+    var invoices = manager.GetAllInvoices();
+    if (invoices.Count == 0)
+    {
+        Console.WriteLine("\n    [INFO] No hi ha factures per esborrar.");
+        return;
+    }
+
+    Console.WriteLine($"\n    [WARN] Estàs a punt d'esborrar totes les factures ({invoices.Count} registres) i posar l'ID a zero.");
+    Console.Write("    Estàs segur que vols continuar? (S/N): ");
+
+    string confirmacio = Console.ReadLine()?.Trim().ToUpper() ?? "";
+
+    if (confirmacio == "S")
+    {
+        Console.WriteLine();
+        var (success, message) = manager.ResetSystem();
+        Console.WriteLine(success ? $"    [OK] {message}" : $"    [FAIL] {message}");
+    }
+    else
+    {
+        Console.WriteLine("\n    [INFO] Operació de reseteig cancel·lada.");
+    }
 }

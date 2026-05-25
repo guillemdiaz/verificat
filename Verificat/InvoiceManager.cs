@@ -130,6 +130,15 @@ internal class InvoiceManager
         };
     }
 
+    public (bool Success, string Message) ResetSystem()
+    {
+        bool success = _repository.DeleteAllInvoices();
+
+        return success
+            ? (true, "Factures esborrades i comptador d'ID a 0.")
+            : (false, "No s'ha pogut resetejar la base de dades.");
+    }
+
     public List<Invoice> GetAllInvoices() => _repository.GetAllOrdered();
 
     private static string GenerateSha256Hash(string payload)

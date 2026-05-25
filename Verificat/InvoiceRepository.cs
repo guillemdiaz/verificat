@@ -153,4 +153,24 @@ internal class InvoiceRepository
 
         return rowsAffected > 0;
     }
+
+    public bool DeleteAllInvoices()
+    {
+        const string query = "TRUNCATE TABLE RegistresFacturacio";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            using var command = new SqlCommand(query, connection);
+
+            connection.Open();
+            command.ExecuteNonQuery();
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
